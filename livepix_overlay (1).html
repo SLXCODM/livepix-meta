@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta LivePix - Overlay</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Nunito', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 20px;
+  }
+
+  .meta-container {
+    position: relative;
+    width: 380px;
+    background: linear-gradient(145deg, rgba(30,0,60,0.92), rgba(60,0,100,0.88));
+    border-radius: 14px;
+    padding: 10px 16px 8px 16px;
+    border: 1.5px solid rgba(168,85,247,0.5);
+    box-shadow: 
+      0 0 15px rgba(168,85,247,0.3),
+      0 0 40px rgba(168,85,247,0.1),
+      inset 0 0 15px rgba(168,85,247,0.08);
+    animation: containerPulse 3s ease-in-out infinite;
+    backdrop-filter: blur(8px);
+    z-index: 1;
+  }
+
+  @keyframes containerPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(168,85,247,0.3), 0 0 40px rgba(168,85,247,0.1), inset 0 0 15px rgba(168,85,247,0.08); }
+    50% { box-shadow: 0 0 22px rgba(168,85,247,0.5), 0 0 55px rgba(168,85,247,0.18), inset 0 0 20px rgba(168,85,247,0.12); }
+  }
+
+  .meta-title {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 5px;
+    text-shadow: 0 0 8px rgba(168,85,247,0.7);
+    letter-spacing: 0.3px;
+    min-height: 16px;
+  }
+
+  .meta-title .typing { display: inline; }
+  .meta-title .cursor { animation: blink 1s step-end infinite; color: #e879f9; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .bar-wrapper {
+    position: relative;
+    width: 100%;
+    height: 16px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(168,85,247,0.2);
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a855f7, #d946ef, #a855f7);
+    background-size: 200% 100%;
+    border-radius: 8px;
+    width: 0%;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    animation: barShine 2s linear infinite;
+    box-shadow: 0 0 10px rgba(217,70,239,0.4);
+  }
+
+  @keyframes barShine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: sparkle 1.5s ease-in-out infinite;
+  }
+
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(-8px); }
+  }
+
+  .meta-values {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    color: #c084fc;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .meta-values .current { color: #fff; text-shadow: 0 0 6px rgba(255,255,255,0.4); font-size: 12px; }
+  .meta-values .target { color: #fbbf24; font-size: 12px; }
+
+  .livepix-link {
+    text-align: center;
+    margin-top: 3px;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+  .livepix-link:hover { opacity: 0.7; }
+  .livepix-link a { color: #a78bfa; font-size: 9px; font-weight: 400; text-decoration: none; letter-spacing: 0.3px; }
+  .livepix-link a:hover { color: #d946ef; text-decoration: underline; }
+  .livepix-link a::before { content: '🔗 '; font-size: 8px; }
+
+  /* GATINHO */
+  .cat-peeking-container {
+    position: absolute;
+    top: -38px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 45px;
+    z-index: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .cat-peeking {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 65px;
+    height: 42px;
+    animation: catPeekCycle 15s ease-in-out infinite;
+  }
+
+  @keyframes catPeekCycle {
+    0%, 5% { transform: translateX(-50%) translateY(40px); opacity: 0; }
+    20% { transform: translateX(-50%) translateY(12px); opacity: 1; }
+    25% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    25%, 70% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    75% { transform: translateX(-50%) translateY(8px); opacity: 1; }
+    80% { transform: translateX(-50%) translateY(40px); opacity: 0; }
+    80%, 100% { transform: translateX(-50%) translateY(40px); opacity: 0; }
+  }
+
+  .cat-head-peek {
+    width: 50px;
+    height: 38px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    border-radius: 25px 25px 20px 20px;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(0,0,0,0.25);
+  }
+
+  .cat-ear-peek-left, .cat-ear-peek-right {
+    width: 0; height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 15px solid #1a1a2e;
+    position: absolute;
+    top: -11px;
+  }
+  .cat-ear-peek-left { left: 6px; transform: rotate(-20deg); }
+  .cat-ear-peek-right { right: 6px; transform: rotate(20deg); }
+  .cat-ear-peek-left::after, .cat-ear-peek-right::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: -4px;
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 7px solid #2d1b4e;
+  }
+
+  .cat-eye-peek {
+    width: 13px; height: 16px;
+    background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+    border-radius: 50%;
+    position: absolute;
+    top: 11px;
+    border: 1.5px solid #1a1a2e;
+    overflow: hidden;
+    animation: catBlinkPeek 3s ease-in-out infinite;
+  }
+  .cat-eye-peek.left { left: 9px; }
+  .cat-eye-peek.right { right: 9px; }
+  .cat-eye-peek::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 4px; height: 4px;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.9;
+  }
+  .cat-eye-peek::after {
+    content: '';
+    position: absolute;
+    bottom: 2px; right: 2px;
+    width: 2px; height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.6;
+  }
+  .cat-pupil {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px; height: 10px;
+    background: #0f0f1a;
+    border-radius: 50%;
+  }
+  @keyframes catBlinkPeek {
+    0%, 40%, 60%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.1); }
+  }
+
+  .cat-nose-peek {
+    width: 5px; height: 4px;
+    background: linear-gradient(180deg, #f472b6, #ec4899);
+    border-radius: 50% 50% 60% 60%;
+    position: absolute;
+    top: 25px; left: 50%;
+    transform: translateX(-50%);
+  }
+  .cat-mouth-peek {
+    position: absolute;
+    top: 28px; left: 50%;
+    transform: translateX(-50%);
+    width: 11px; height: 5px;
+  }
+  .cat-mouth-peek::before, .cat-mouth-peek::after {
+    content: '';
+    position: absolute;
+    width: 5px; height: 4px;
+    border: 1px solid #f472b6;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    top: 0;
+  }
+  .cat-mouth-peek::before { left: 0; border-right: none; border-radius: 0 0 0 5px; }
+  .cat-mouth-peek::after { right: 0; border-left: none; border-radius: 0 0 5px 0; }
+
+  .cat-whisker {
+    position: absolute;
+    width: 12px; height: 0.8px;
+    background: rgba(255,255,255,0.25);
+    top: 22px;
+  }
+  .cat-whisker.left-1 { left: -5px; transform: rotate(-10deg); }
+  .cat-whisker.left-2 { left: -4px; top: 25px; transform: rotate(-5deg); }
+  .cat-whisker.right-1 { right: -5px; transform: rotate(10deg); }
+  .cat-whisker.right-2 { right: -4px; top: 25px; transform: rotate(5deg); }
+
+  .cat-paws {
+    position: absolute;
+    bottom: -5px; left: 50%;
+    transform: translateX(-50%);
+    width: 70px; height: 14px;
+    z-index: 5;
+  }
+  .cat-paw-peek {
+    width: 16px; height: 12px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    border-radius: 8px 8px 7px 7px;
+    position: absolute;
+    bottom: 0;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+    animation: pawWiggle 2s ease-in-out infinite;
+  }
+  .cat-paw-peek.left { left: 12px; animation-delay: 0s; }
+  .cat-paw-peek.right { right: 12px; animation-delay: 0.3s; }
+  .cat-paw-peek::before {
+    content: '';
+    position: absolute;
+    top: -2px; left: 50%;
+    transform: translateX(-50%);
+    width: 11px; height: 4px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    border-radius: 5px 5px 0 0;
+  }
+  @keyframes pawWiggle {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-2px) rotate(2deg); }
+  }
+
+  .percent-badge {
+    position: absolute;
+    top: -7px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(145deg, #d946ef, #a855f7);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 1px 7px;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(217,70,239,0.4);
+    animation: badgePulse 2s ease-in-out infinite;
+    z-index: 10;
+  }
+  @keyframes badgePulse {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.1); }
+  }
+
+  .donation-popup {
+    position: absolute;
+    top: -32px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(145deg, #fbbf24, #f59e0b);
+    color: #1e1b4b;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 4px 12px;
+    border-radius: 15px;
+    opacity: 0;
+    animation: popupShow 2s ease-out forwards;
+    white-space: nowrap;
+    box-shadow: 0 0 10px rgba(251,191,36,0.4);
+    z-index: 20;
+  }
+  @keyframes popupShow {
+    0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.8); }
+    20% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.1); }
+    30% { transform: translateX(-50%) translateY(0) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-15px); }
+  }
+
+  .confetti {
+    position: absolute;
+    width: 6px; height: 6px;
+    top: -8px;
+    pointer-events: none;
+    animation: confettiFall 3s ease-out forwards;
+    z-index: 30;
+  }
+  @keyframes confettiFall {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(150px) rotate(720deg); }
+  }
+
+  .goal-reached { animation: goalFlash 0.5s ease-in-out 3; }
+  @keyframes goalFlash {
+    0%, 100% { border-color: rgba(168,85,247,0.5); box-shadow: 0 0 15px rgba(168,85,247,0.3); }
+    50% { border-color: #fbbf24; box-shadow: 0 0 30px rgba(251,191,36,0.6), 0 0 60px rgba(251,191,36,0.3); }
+  }
+
+  .particle {
+    position: absolute;
+    width: 3px; height: 3px;
+    background: #d946ef;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(0) scale(0); }
+    20% { opacity: 1; transform: translateY(-15px) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0.5); }
+  }
+
+  .connection-status {
+    position: absolute;
+    top: -20px;
+    right: 10px;
+    font-size: 8px;
+    color: #34d399;
+    opacity: 0.6;
+  }
+  .connection-status.offline { color: #ef4444; }
+</style>
+</head>
+<body>
+
+<div class="meta-container" id="metaContainer">
+  <div class="connection-status" id="connStatus">● conectando...</div>
+  <div class="percent-badge" id="percentBadge">0%</div>
+
+  <div class="cat-peeking-container">
+    <div class="cat-peeking">
+      <div class="cat-head-peek">
+        <div class="cat-ear-peek-left"></div>
+        <div class="cat-ear-peek-right"></div>
+        <div class="cat-eye-peek left"><div class="cat-pupil"></div></div>
+        <div class="cat-eye-peek right"><div class="cat-pupil"></div></div>
+        <div class="cat-nose-peek"></div>
+        <div class="cat-mouth-peek"></div>
+        <div class="cat-whisker left-1"></div>
+        <div class="cat-whisker left-2"></div>
+        <div class="cat-whisker right-1"></div>
+        <div class="cat-whisker right-2"></div>
+      </div>
+      <div class="cat-paws">
+        <div class="cat-paw-peek left"></div>
+        <div class="cat-paw-peek right"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-title" id="metaTitle">
+    <span class="typing" id="typingText">Essa bala merece seu apoio né?</span><span class="cursor">|</span>
+  </div>
+
+  <div class="bar-wrapper">
+    <div class="bar-fill" id="barFill"></div>
+  </div>
+
+  <div class="meta-values">
+    <span class="current">R$ <span id="currentValue">0,00</span></span>
+    <span class="target">Meta: R$ <span id="targetValue">50,00</span></span>
+  </div>
+
+  <div class="livepix-link">
+    <a href="https://livepix.gg/slx" target="_blank">livepix.gg/slx</a>
+  </div>
+</div>
+
+<script>
+  const META_VALUE = 50;
+  const TITLE_TEXT = "Essa bala merece seu apoio né?";
+  const SUPABASE_URL = "https://cugkhfhjvubkpcatxcal.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_omGw32W6HoUkV88hxRHhFA_LHgpYKYc";
+
+  let currentValue = 0;
+  let previousValue = 0;
+  let goalReachedShown = false;
+  let supabase;
+
+  // ===== SUPABASE =====
+  async function initSupabase() {
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      const { data, error } = await supabase
+        .from('meta')
+        .select('valor_atual')
+        .eq('id', 1)
+        .single();
+
+      if (data) {
+        currentValue = parseFloat(data.valor_atual) || 0;
+        previousValue = currentValue;
+        updateBar();
+      }
+
+      supabase
+        .channel('meta-changes')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'meta', filter: 'id=eq.1' }, (payload) => {
+          const newVal = parseFloat(payload.new.valor_atual) || 0;
+          if (newVal !== currentValue) {
+            currentValue = newVal;
+            updateBar();
+          }
+        })
+        .subscribe();
+
+      document.getElementById('connStatus').textContent = '● online';
+      document.getElementById('connStatus').classList.remove('offline');
+
+    } catch (e) {
+      console.error('Erro Supabase:', e);
+      document.getElementById('connStatus').textContent = '● offline';
+      document.getElementById('connStatus').classList.add('offline');
+    }
+  }
+
+  // ===== DIGITAÇÃO (começa depois de 20s) =====
+  const typingEl = document.getElementById('typingText');
+  let charIndex = TITLE_TEXT.length;
+  let isDeleting = false;
+  let isWaiting = false;
+  let typingStarted = false;
+
+  function typeLoop() {
+    if (!typingStarted) return;
+
+    if (!isDeleting && !isWaiting) {
+      if (charIndex < TITLE_TEXT.length) {
+        typingEl.textContent = TITLE_TEXT.substring(0, charIndex + 1);
+        charIndex++;
+        setTimeout(typeLoop, 80);
+      } else {
+        isWaiting = true;
+        setTimeout(() => { isWaiting = false; isDeleting = true; typeLoop(); }, 20000);
+      }
+    } else if (isDeleting && !isWaiting) {
+      if (charIndex > 0) {
+        typingEl.textContent = TITLE_TEXT.substring(0, charIndex - 1);
+        charIndex--;
+        setTimeout(typeLoop, 40);
+      } else {
+        isDeleting = false;
+        setTimeout(typeLoop, 500);
+      }
+    }
+  }
+
+  // Inicia o ciclo de digitação após 20 segundos
+  setTimeout(() => {
+    typingStarted = true;
+    isDeleting = true;
+    typeLoop();
+  }, 20000);
+
+  function formatMoney(value) {
+    return value.toFixed(2).replace('.', ',');
+  }
+
+  function updateBar() {
+    const percent = Math.min((currentValue / META_VALUE) * 100, 100);
+    document.getElementById('barFill').style.width = percent + '%';
+    document.getElementById('currentValue').textContent = formatMoney(currentValue);
+    document.getElementById('percentBadge').textContent = Math.floor(percent) + '%';
+
+    if (currentValue > previousValue && previousValue >= 0) {
+      showDonationPopup(currentValue - previousValue);
+    }
+
+    if (currentValue >= META_VALUE && !goalReachedShown) {
+      goalReachedShown = true;
+      document.getElementById('metaContainer').classList.add('goal-reached');
+      createConfetti();
+      setTimeout(() => document.getElementById('metaContainer').classList.remove('goal-reached'), 2000);
+    }
+
+    if (currentValue < META_VALUE) goalReachedShown = false;
+    previousValue = currentValue;
+  }
+
+  function showDonationPopup(amount) {
+    const popup = document.createElement('div');
+    popup.className = 'donation-popup';
+    popup.textContent = '+ R$ ' + formatMoney(amount) + ' 💜';
+    document.getElementById('metaContainer').appendChild(popup);
+    setTimeout(() => popup.remove(), 2500);
+  }
+
+  function createConfetti() {
+    const colors = ['#a855f7', '#d946ef', '#fbbf24', '#c084fc', '#e879f9', '#fff'];
+    for (let i = 0; i < 25; i++) {
+      setTimeout(() => {
+        const conf = document.createElement('div');
+        conf.className = 'confetti';
+        conf.style.left = Math.random() * 100 + '%';
+        conf.style.background = colors[Math.floor(Math.random() * colors.length)];
+        conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        conf.style.width = (Math.random() * 6 + 3) + 'px';
+        conf.style.height = (Math.random() * 6 + 3) + 'px';
+        conf.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        document.getElementById('metaContainer').appendChild(conf);
+        setTimeout(() => conf.remove(), 4000);
+      }, i * 50);
+    }
+  }
+
+  function createParticles() {
+    setInterval(() => {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.bottom = '0';
+      particle.style.animation = `floatUp ${Math.random() * 3 + 2}s ease-out forwards`;
+      particle.style.background = Math.random() > 0.5 ? '#d946ef' : '#a855f7';
+      document.querySelector('.meta-container').appendChild(particle);
+      setTimeout(() => particle.remove(), 5000);
+    }, 1000);
+  }
+  createParticles();
+
+  initSupabase();
+</script>
+
+</body>
+</html>
